@@ -19,4 +19,6 @@ dependencies {
     compileOnly("com.google.auto.service:auto-service:1.1.1")
     annotationProcessor("com.google.auto.service:auto-service:1.1.1")
     implementation("com.squareup:javapoet:1.13.0")
+    implementation("net.bytebuddy:byte-buddy:1.14.8")
+    implementation("net.bytebuddy:byte-buddy-agent:1.14.8")
 }

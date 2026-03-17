@@ -20,6 +20,7 @@ import java.util.*;
 public class AnnotationProcessor extends AbstractProcessor {
 
     private final Map<TypeElement, List<TypeElement>> supersGraph = new LinkedHashMap<>();
+    private final Map<String, List<TypeElement>> mroCache = new HashMap<>();
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations,
@@ -33,8 +34,8 @@ public class AnnotationProcessor extends AbstractProcessor {
     }
 
     private boolean processAnnotations(Set<? extends TypeElement> annotations,
-                                      RoundEnvironment roundEnv,
-                                      boolean generateFinal) {
+                                       RoundEnvironment roundEnv,
+                                       boolean generateFinal) {
 
         /*
          * @Supers
@@ -292,16 +293,26 @@ public class AnnotationProcessor extends AbstractProcessor {
                     allClasses.addAll(parents);
                 }
 
+                mroCache.clear();
+
                 for (TypeElement cls : allClasses) {
 
-                    List<TypeElement> mro = buildMRO(cls, supersGraph);
+                    List<TypeElement> mro;
+                    try {
+                        mro = buildMRO(cls, supersGraph);
+                    } catch (IllegalStateException ex) {
+                        processingEnv.getMessager().printMessage(
+                                Diagnostic.Kind.ERROR,
+                                "Failed to build C3 MRO for " + cls.getQualifiedName() + ": " + ex.getMessage()
+                        );
+                        mro = List.of(cls);
+                    }
 
                     CodeBlock.Builder list =
                             CodeBlock.builder().add("$T.of(", List.class);
 
                     for (int i = 0; i < mro.size(); i++) {
-
-                        list.add("$T.class", mro.get(i));
+                        list.add("$T.class", TypeName.get(mro.get(i).asType()));
 
                         if (i != mro.size() - 1) list.add(", ");
                     }
@@ -310,7 +321,7 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                     staticBlock.addStatement(
                             "MROS.put($T.class, $L)",
-                            cls,
+                            TypeName.get(cls.asType()),
                             list.build()
                     );
                 }
@@ -355,21 +366,125 @@ public class AnnotationProcessor extends AbstractProcessor {
     }
 
     /*
-     * MRO
+     * C3 MRO
      */
+
     private List<TypeElement> buildMRO(
             TypeElement cls,
             Map<TypeElement, List<TypeElement>> graph) {
 
-        List<TypeElement> result = new ArrayList<>();
+        return buildMRO(cls, graph, new HashSet<>());
+    }
 
-        result.add(cls);
+    private List<TypeElement> buildMRO(
+            TypeElement cls,
+            Map<TypeElement, List<TypeElement>> graph,
+            Set<String> visiting) {
 
-        for (TypeElement p : graph.getOrDefault(cls, List.of())) {
+        String qname = cls.getQualifiedName().toString();
 
-            result.addAll(buildMRO(p, graph));
+        if (mroCache.containsKey(qname)) {
+            return mroCache.get(qname);
         }
 
+        if (visiting.contains(qname)) {
+            throw new IllegalStateException("Cycle detected in inheritance graph at " + qname);
+        }
+
+        visiting.add(qname);
+
+        List<TypeElement> result = new ArrayList<>();
+        result.add(cls);
+
+        List<List<TypeElement>> sequences = new ArrayList<>();
+
+        List<TypeElement> parents = graph.getOrDefault(cls, List.of());
+
+        for (TypeElement parent : parents) {
+            sequences.add(new ArrayList<>(buildMRO(parent, graph, visiting)));
+        }
+
+        sequences.add(new ArrayList<>(parents));
+
+        result.addAll(merge(sequences));
+
+        List<TypeElement> cached = new ArrayList<>(result);
+        mroCache.put(qname, cached);
+
+        visiting.remove(qname);
+
         return result;
+    }
+
+    private List<TypeElement> merge(List<List<TypeElement>> sequences) {
+
+        List<List<TypeElement>> seqs = new ArrayList<>();
+        for (List<TypeElement> s : sequences) {
+            seqs.add(new ArrayList<>(s));
+        }
+
+        List<TypeElement> result = new ArrayList<>();
+
+        while (true) {
+
+            Iterator<List<TypeElement>> it = seqs.iterator();
+            while (it.hasNext()) {
+                if (it.next().isEmpty()) it.remove();
+            }
+
+            if (seqs.isEmpty()) {
+                return result;
+            }
+
+            TypeElement candidate = null;
+
+            outer:
+            for (List<TypeElement> seq : seqs) {
+                if (seq.isEmpty()) continue;
+                TypeElement head = seq.get(0);
+
+                if (isGoodCandidate(head, seqs)) {
+                    candidate = head;
+                    break outer;
+                }
+            }
+
+            if (candidate == null) {
+                throw new IllegalStateException("C3 linearization failed: inconsistent hierarchy");
+            }
+
+            result.add(candidate);
+
+            for (List<TypeElement> seq : seqs) {
+                Iterator<TypeElement> it2 = seq.iterator();
+                while (it2.hasNext()) {
+                    TypeElement t = it2.next();
+                    if (sameQualified(t, candidate)) {
+                        it2.remove();
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean isGoodCandidate(
+            TypeElement candidate,
+            List<List<TypeElement>> sequences) {
+
+        for (List<TypeElement> seq : sequences) {
+            for (int i = 1; i < seq.size(); i++) {
+                TypeElement t = seq.get(i);
+                if (sameQualified(t, candidate)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private boolean sameQualified(TypeElement a, TypeElement b) {
+        if (a == null || b == null) return false;
+        return a.getQualifiedName().toString().equals(b.getQualifiedName().toString());
     }
 }
