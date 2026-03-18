@@ -305,13 +305,15 @@ public class AnnotationProcessor extends AbstractProcessor {
                     List<TypeElement> mro;
                     try {
                         mro = buildMRO(cls, supersGraph);
-                    } catch (IllegalStateException ex) {
-                        processingEnv.getMessager().printMessage(
-                                Diagnostic.Kind.ERROR,
-                                "Failed to build C3 MRO for " + cls.getQualifiedName() + ": " + ex.getMessage()
-                        );
-                        mro = List.of(cls);
-                    }
+                    }catch (IllegalStateException ex) {
+
+                            staticBlock.addStatement(
+                                    "MROS.put($T.class, null)",
+                                    TypeName.get(cls.asType())
+                            );
+
+                            continue;
+                        }
 
                     CodeBlock.Builder list =
                             CodeBlock.builder().add("$T.of(", List.class);
@@ -343,7 +345,15 @@ public class AnnotationProcessor extends AbstractProcessor {
                                         )
                                 )
                                 .addParameter(Class.class, "cls")
-                                .addStatement("return MROS.getOrDefault(cls, $T.of())", List.class)
+                                .beginControlFlow("if (!MROS.containsKey(cls))")
+                                .addStatement("return $T.of()", List.class)
+                                .endControlFlow()
+                                .beginControlFlow("if (MROS.get(cls) == null)")
+                                .addStatement("throw new $T($S + cls)",
+                                        IllegalStateException.class,
+                                        "C3 linearization failed for ")
+                                .endControlFlow()
+                                .addStatement("return MROS.get(cls)")
                                 .build();
 
                 hierarchy.addMethod(getMRO);

@@ -2,6 +2,8 @@ package kuzminov;
 
 import kuzminov.annotations.RootInterface;
 import kuzminov.annotations.Supers;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 @RootInterface
 interface C3Example {
@@ -104,5 +106,27 @@ class Z extends C3ExampleRootClass {
     public void action() {
         System.out.println("Z");
         nextAction();
+    }
+}
+
+public class WikiTest {
+
+    @Test
+    public void testC3Linearization() {
+        Z z = new Z();
+        z.action();
+        var mro = C3ExampleHierarchy.getMRO(Z.class);
+        assertNotNull(mro);
+        assertEquals(10, mro.size());
+        assertEquals(Z.class, mro.get(0));
+        assertEquals(K1.class, mro.get(1));
+        assertEquals(C.class, mro.get(2));
+        assertEquals(K3.class, mro.get(3));
+        assertEquals(A.class, mro.get(4));
+        assertEquals(K2.class, mro.get(5));
+        assertEquals(B.class, mro.get(6));
+        assertEquals(D.class, mro.get(7));
+        assertEquals(E.class, mro.get(8));
+        assertEquals(O.class, mro.get(9));
     }
 }
