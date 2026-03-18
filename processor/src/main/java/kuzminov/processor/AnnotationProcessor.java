@@ -6,6 +6,7 @@ import com.squareup.javapoet.*;
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import java.io.IOException;
@@ -259,6 +260,7 @@ public class AnnotationProcessor extends AbstractProcessor {
             TypeMirror interfaceType = interfaceElement.asType();
             String interfaceName = interfaceElement.getSimpleName().toString();
             String hierarchyName = interfaceName + "Hierarchy";
+            String rootClassName = interfaceName + "RootClass";
 
             try {
 
@@ -288,14 +290,17 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                 CodeBlock.Builder staticBlock = CodeBlock.builder();
 
-                Set<TypeElement> allClasses = new HashSet<>(supersGraph.keySet());
-                for (List<TypeElement> parents : supersGraph.values()) {
-                    allClasses.addAll(parents);
+                Set<TypeElement> relevantClasses = new HashSet<>();
+                for (TypeElement cls : supersGraph.keySet()) {
+                    if (inheritsFrom(cls, rootClassName)) {
+                        relevantClasses.add(cls);
+                        addAllParents(cls, relevantClasses);
+                    }
                 }
 
                 mroCache.clear();
 
-                for (TypeElement cls : allClasses) {
+                for (TypeElement cls : relevantClasses) {
 
                     List<TypeElement> mro;
                     try {
@@ -486,5 +491,26 @@ public class AnnotationProcessor extends AbstractProcessor {
     private boolean sameQualified(TypeElement a, TypeElement b) {
         if (a == null || b == null) return false;
         return a.getQualifiedName().toString().equals(b.getQualifiedName().toString());
+    }
+
+    private void addAllParents(TypeElement cls, Set<TypeElement> set) {
+        for (TypeElement parent : supersGraph.getOrDefault(cls, List.of())) {
+            if (!set.contains(parent)) {
+                set.add(parent);
+                addAllParents(parent, set);
+            }
+        }
+    }
+
+    private boolean inheritsFrom(TypeElement cls, String rootClassName) {
+        TypeMirror superClass = cls.getSuperclass();
+        if (superClass.getKind() == TypeKind.NONE) return false;
+        String superName = superClass.toString();
+        if (superName.equals(rootClassName)) return true;
+        if (superClass.getKind() == TypeKind.DECLARED) {
+            TypeElement superElement = (TypeElement) processingEnv.getTypeUtils().asElement(superClass);
+            return inheritsFrom(superElement, rootClassName);
+        }
+        return false;
     }
 }
