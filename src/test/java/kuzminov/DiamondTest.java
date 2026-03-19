@@ -3,7 +3,10 @@ package kuzminov;
 import kuzminov.annotations.RootInterface;
 import kuzminov.annotations.Supers;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RootInterface
 interface DiamondInterface {
@@ -12,45 +15,55 @@ interface DiamondInterface {
 
 @Supers({})
 class Bottom extends DiamondInterfaceRootClass {
-    public Bottom() {}
+    public Bottom() {
+    }
+
     public void doSomething() {
-        System.out.println("Bottom");
+        CallLog.log.add("Bottom");
         nextDoSomething();
     }
 }
 
 @Supers({Bottom.class})
 class Left extends DiamondInterfaceRootClass {
-    public Left() {}
+    public Left() {
+    }
+
     public void doSomething() {
-        System.out.println("Left");
+        CallLog.log.add("Left");
         nextDoSomething();
     }
 }
 
 @Supers({Bottom.class})
 class Right extends DiamondInterfaceRootClass {
-    public Right() {}
+    public Right() {
+    }
+
     public void doSomething() {
-        System.out.println("Right");
+        CallLog.log.add("Right");
         nextDoSomething();
     }
 }
 
 @Supers({Left.class, Right.class})
 class Upper extends DiamondInterfaceRootClass {
-    public Upper() {}
+    public Upper() {
+    }
+
     public void doSomething() {
-        System.out.println("Upper");
+        CallLog.log.add("Upper");
         nextDoSomething();
     }
 }
 
 @Supers({Right.class, Left.class})
 class UpperReverseParents extends DiamondInterfaceRootClass {
-    public UpperReverseParents() {}
+    public UpperReverseParents() {
+    }
+
     public void doSomething() {
-        System.out.println("UpperReverseParents");
+        CallLog.log.add("UpperReverseParents");
         nextDoSomething();
     }
 }
@@ -62,24 +75,31 @@ public class DiamondTest {
         DiamondInterface upper = new Upper();
         upper.doSomething();
         var mro = DiamondInterfaceHierarchy.getMRO(Upper.class);
-        assertNotNull(mro);
-        assertEquals(Upper.class, mro.get(0));
-        assertEquals(4, mro.size());
-        assertEquals(Upper.class, mro.get(0));
-        assertEquals(Left.class, mro.get(1));
-        assertEquals(Right.class, mro.get(2));
-        assertEquals(Bottom.class, mro.get(3));
+        assertEquals(List.of(
+                Upper.class, Left.class, Right.class, Bottom.class
+        ), mro);
     }
+
     @Test
     public void testDiamondReverseInheritance() {
-        DiamondInterface upper = new UpperReverseParents();
-        upper.doSomething();
         var mro = DiamondInterfaceHierarchy.getMRO(UpperReverseParents.class);
-        assertNotNull(mro);
-        assertEquals(4, mro.size());
-        assertEquals(UpperReverseParents.class, mro.get(0));
-        assertEquals(Left.class, mro.get(2));
-        assertEquals(Right.class, mro.get(1));
-        assertEquals(Bottom.class, mro.get(3));
+        assertEquals(List.of(
+                UpperReverseParents.class, Right.class, Left.class, Bottom.class
+        ), mro);
+    }
+
+    @Test
+    public void testNextChainOrder() {
+        CallLog.clear();
+
+        Upper test = new Upper();
+        test.doSomething();
+
+        assertEquals(
+                List.of(
+                        "Upper", "Left", "Right", "Bottom"
+                ),
+                CallLog.log
+        );
     }
 }

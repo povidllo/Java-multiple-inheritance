@@ -3,9 +3,10 @@ package kuzminov;
 import kuzminov.annotations.RootInterface;
 import kuzminov.annotations.Supers;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RootInterface
 interface Shape {
@@ -14,29 +15,33 @@ interface Shape {
 
 @Supers({})
 class Base extends ShapeRootClass {
-    public Base() {}
+    public Base() {
+    }
+
     public void draw() {
-        System.out.println("Base");
+        CallLog.log.add("Base");
         nextDraw();
     }
 }
 
 @Supers({Base.class})
 class Colored extends ShapeRootClass {
-    public Colored() {}
+    public Colored() {
+    }
 
     public void draw() {
-        System.out.println("Colored");
+        CallLog.log.add("Colored");
         nextDraw();
     }
 }
 
 @Supers({Colored.class})
 class Fancy extends ShapeRootClass {
-    public Fancy() {}
+    public Fancy() {
+    }
 
     public void draw() {
-        System.out.println("Fancy");
+        CallLog.log.add("Fancy");
         nextDraw();
     }
 }
@@ -45,13 +50,24 @@ public class LinearTest {
 
     @Test
     public void testLinearInheritance() {
+        var mro = ShapeHierarchy.getMRO(Fancy.class);
+        assertEquals(List.of(
+                Fancy.class, Colored.class, Base.class
+        ), mro);
+    }
+
+    @Test
+    public void testNextChainOrder() {
+        CallLog.clear();
+
         Fancy fancy = new Fancy();
         fancy.draw();
-        var mro = ShapeHierarchy.getMRO(Fancy.class);
-        assertNotNull(mro);
-        assertEquals(3, mro.size());
-        assertEquals(Fancy.class, mro.get(0));
-        assertEquals(Colored.class, mro.get(1));
-        assertEquals(Base.class, mro.get(2));
+
+        assertEquals(
+                List.of(
+                        "Fancy", "Colored", "Base"
+                ),
+                CallLog.log
+        );
     }
 }
