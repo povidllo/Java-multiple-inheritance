@@ -80,7 +80,7 @@ class E extends C3ExampleRootClass {
     }
 }
 
-@Supers({C.class, A.class, B.class})
+@Supers({C.class, FieldsA.class, FieldsB.class})
 class K1 extends C3ExampleRootClass {
     public K1() {
     }
@@ -91,7 +91,7 @@ class K1 extends C3ExampleRootClass {
     }
 }
 
-@Supers({B.class, D.class, E.class})
+@Supers({FieldsB.class, D.class, E.class})
 class K2 extends C3ExampleRootClass {
     public K2() {
     }
@@ -102,7 +102,7 @@ class K2 extends C3ExampleRootClass {
     }
 }
 
-@Supers({A.class, D.class})
+@Supers({FieldsA.class, D.class})
 class K3 extends C3ExampleRootClass {
     public K3() {
     }
@@ -134,8 +134,8 @@ public class WikiTest {
 
         assertEquals(
                 List.of(
-                        Z.class, K1.class, C.class, K3.class, A.class, K2.class,
-                        B.class, D.class, E.class, O.class
+                        Z.class, K1.class, C.class, K3.class, FieldsA.class, K2.class,
+                        FieldsB.class, D.class, E.class, O.class
                 ),
                 mro
         );
