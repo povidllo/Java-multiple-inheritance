@@ -212,9 +212,9 @@ public class AnnotationProcessor extends AbstractProcessor {
                                 .beginControlFlow("for (int i = mro.size() - 1; i >= 1; i--)")
                                 .addStatement("Class<?> cls = (Class<?>) mro.get(i)")
                                 .beginControlFlow("try")
-                                .addStatement("$T cons = cls.getConstructor()", java.lang.reflect.Constructor.class)
-                                .addStatement("$L instance = ($L) cons.newInstance()", rootName, rootName)
-                                .addStatement("instance.next = current")
+                                .addStatement("$T cons = cls.getDeclaredConstructor()", java.lang.reflect.Constructor.class)
+                                .addStatement("cons.setAccessible(true)")
+                                .addStatement("$L instance = ($L) cons.newInstance()", rootName, rootName).addStatement("instance.next = current")
                                 .addStatement("instance.chainInitialized = true")
                                 .addStatement("current = instance")
                                 .nextControlFlow("catch ($T e)", Exception.class)
@@ -305,15 +305,15 @@ public class AnnotationProcessor extends AbstractProcessor {
                     List<TypeElement> mro;
                     try {
                         mro = buildMRO(cls, supersGraph);
-                    }catch (IllegalStateException ex) {
+                    } catch (IllegalStateException ex) {
 
-                            staticBlock.addStatement(
-                                    "MROS.put($T.class, null)",
-                                    TypeName.get(cls.asType())
-                            );
+                        staticBlock.addStatement(
+                                "MROS.put($T.class, null)",
+                                TypeName.get(cls.asType())
+                        );
 
-                            continue;
-                        }
+                        continue;
+                    }
 
                     CodeBlock.Builder list =
                             CodeBlock.builder().add("$T.of(", List.class);
@@ -453,14 +453,13 @@ public class AnnotationProcessor extends AbstractProcessor {
 
             TypeElement candidate = null;
 
-            outer:
             for (List<TypeElement> seq : seqs) {
                 if (seq.isEmpty()) continue;
                 TypeElement head = seq.get(0);
 
                 if (isGoodCandidate(head, seqs)) {
                     candidate = head;
-                    break outer;
+                    break;
                 }
             }
 
