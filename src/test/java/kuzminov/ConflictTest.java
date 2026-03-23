@@ -12,22 +12,46 @@ interface Conflict {
 }
 
 @Supers({})
-class O5 extends ConflictRootClass { public void action(){ nextAction(); } }
+class O5 extends ConflictRootClass {
+    public void action() {
+        nextAction();
+    }
+}
 
 @Supers({O5.class})
-class A5 extends ConflictRootClass { public void action(){ nextAction(); } }
+class A5 extends ConflictRootClass {
+    public void action() {
+        nextAction();
+    }
+}
 
 @Supers({O5.class})
-class B5 extends ConflictRootClass { public void action(){ nextAction(); } }
+class B5 extends ConflictRootClass {
+    public void action() {
+        nextAction();
+    }
+}
 
 @Supers({A5.class, B5.class})
-class C5 extends ConflictRootClass { public void action(){ nextAction(); } }
+class C5 extends ConflictRootClass {
+    public void action() {
+        nextAction();
+    }
+}
 
 @Supers({B5.class, A5.class})
-class D5 extends ConflictRootClass { public void action(){ nextAction(); } }
+class D5 extends ConflictRootClass {
+    public void action() {
+        nextAction();
+    }
+}
 
 @Supers({C5.class, D5.class})
-class E5 extends ConflictRootClass { public void action(){ nextAction(); } }
+class E5 extends ConflictRootClass {
+    public void action() {
+        nextAction();
+    }
+}
 
 public class ConflictTest {
     @Test
