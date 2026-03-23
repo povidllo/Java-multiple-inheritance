@@ -123,17 +123,15 @@ public class AnnotationProcessor extends AbstractProcessor {
                 classBuilder.addField(nextField);
 
                 /*
-                 * chainInitialized
+                 * Конструктор для инициализации цепочки
                  */
-                FieldSpec chainInit =
-                        FieldSpec.builder(
-                                boolean.class,
-                                "chainInitialized",
-                                Modifier.PRIVATE,
-                                Modifier.VOLATILE
-                        ).build();
+                MethodSpec constructor =
+                        MethodSpec.constructorBuilder()
+                                .addModifiers(Modifier.PROTECTED)
+                                .addStatement("initChain()")
+                                .build();
 
-                classBuilder.addField(chainInit);
+                classBuilder.addMethod(constructor);
 
                 /*
                  * методы
@@ -171,7 +169,6 @@ public class AnnotationProcessor extends AbstractProcessor {
                             MethodSpec.methodBuilder(nextMethod)
                                     .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
                                     .returns(TypeName.get(method.getReturnType()))
-                                    .addStatement("ensureChainInitialized()")
                                     .beginControlFlow("if (next != null)")
                                     .addStatement("next.$L()", methodName)
                                     .endControlFlow()
@@ -179,24 +176,6 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                     classBuilder.addMethod(next);
                 }
-
-                /*
-                 * ensureChainInitialized
-                 */
-                MethodSpec ensure =
-                        MethodSpec.methodBuilder("ensureChainInitialized")
-                                .addModifiers(Modifier.PRIVATE)
-                                .beginControlFlow("if (!chainInitialized)")
-                                .beginControlFlow("synchronized (this)")
-                                .beginControlFlow("if (!chainInitialized)")
-                                .addStatement("initChain()")
-                                .addStatement("chainInitialized = true")
-                                .endControlFlow()
-                                .endControlFlow()
-                                .endControlFlow()
-                                .build();
-
-                classBuilder.addMethod(ensure);
 
                 /*
                  * initChain
@@ -215,7 +194,6 @@ public class AnnotationProcessor extends AbstractProcessor {
                                 .addStatement("$T cons = cls.getDeclaredConstructor()", java.lang.reflect.Constructor.class)
                                 .addStatement("cons.setAccessible(true)")
                                 .addStatement("$L instance = ($L) cons.newInstance()", rootName, rootName).addStatement("instance.next = current")
-                                .addStatement("instance.chainInitialized = true")
                                 .addStatement("current = instance")
                                 .nextControlFlow("catch ($T e)", Exception.class)
                                 .addStatement("throw new RuntimeException(e)")
