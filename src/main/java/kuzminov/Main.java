@@ -5,6 +5,8 @@ import kuzminov.annotations.Supers;
 
 @RootInterface
 interface MainInt {
+    int a = 12;
+
     void doSomething();
 }
 
@@ -14,7 +16,7 @@ class MainB extends MainIntRootClass {
     }
 
     public void doSomething() {
-        System.out.println("B");
+        System.out.println(a);
 
         nextDoSomething();
     }
@@ -22,11 +24,13 @@ class MainB extends MainIntRootClass {
 
 @Supers({MainB.class})
 class MainL extends MainIntRootClass {
-//    public MainL() {
+    //    public MainL() {
 //    }
+    String a = "be";
 
     public void doSomething() {
-        System.out.println("L");
+//        System.out.println("L");
+        System.out.println(a);
 
         nextDoSomething();
     }
@@ -38,7 +42,8 @@ class MainR extends MainIntRootClass {
     }
 
     public void doSomething() {
-        System.out.println("R");
+//        System.out.println("R");
+        System.out.println(a);
 
         nextDoSomething();
     }
@@ -50,17 +55,16 @@ class MainU extends MainIntRootClass {
 //    }
 
     public void doSomething() {
-        System.out.println("U");
+//        System.out.println("U");
+        System.out.println(a);
         nextDoSomething();
     }
 }
 
 public class Main {
     public static void main(String[] args) {
-        MainInt l = new MainL();
         MainInt a = new MainU();
         a.doSomething();
         System.out.println("\n\n");
-        l.doSomething();
     }
 }

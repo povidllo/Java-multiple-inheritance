@@ -81,9 +81,9 @@ public class CreateTwoClassesInChainTests {
                 CallLog.log
         );
     }
-
+    
+    @Test
     public void testTwoClassesInChainReversedTests() {
-
         CallLog.clear();
         TwoInt nextTest = new TwoC();
         nextTest.doSomething();
