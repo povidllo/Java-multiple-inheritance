@@ -6,7 +6,6 @@ import com.squareup.javapoet.*;
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import java.io.IOException;
@@ -21,7 +20,7 @@ import java.util.*;
 public class AnnotationProcessor extends AbstractProcessor {
 
     private final Map<TypeElement, List<TypeElement>> supersGraph = new LinkedHashMap<>();
-    private final Map<String, List<TypeElement>> mroCache = new HashMap<>();
+    private final MroResolver mroResolver = new MroResolver();
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations,
@@ -235,7 +234,6 @@ public class AnnotationProcessor extends AbstractProcessor {
 
 
             TypeElement interfaceElement = (TypeElement) element;
-            TypeMirror interfaceType = interfaceElement.asType();
             String interfaceName = interfaceElement.getSimpleName().toString();
             String hierarchyName = interfaceName + "Hierarchy";
             String rootClassName = interfaceName + "RootClass";
@@ -270,19 +268,17 @@ public class AnnotationProcessor extends AbstractProcessor {
 
                 Set<TypeElement> relevantClasses = new HashSet<>();
                 for (TypeElement cls : supersGraph.keySet()) {
-                    if (inheritsFrom(cls, rootClassName)) {
+                    if (HierarchyUtils.inheritsFrom(cls, rootClassName, processingEnv)) {
                         relevantClasses.add(cls);
-                        addAllParents(cls, relevantClasses);
+                        HierarchyUtils.addAllParents(cls, supersGraph, relevantClasses);
                     }
                 }
-
-                mroCache.clear();
 
                 for (TypeElement cls : relevantClasses) {
 
                     List<TypeElement> mro;
                     try {
-                        mro = buildMRO(cls, supersGraph);
+                        mro = mroResolver.buildMRO(cls, supersGraph);
                     } catch (IllegalStateException ex) {
 
                         staticBlock.addStatement(
@@ -355,149 +351,6 @@ public class AnnotationProcessor extends AbstractProcessor {
             }
         }
 
-        return false;
-    }
-
-    /*
-     * C3 MRO
-     */
-
-    private List<TypeElement> buildMRO(
-            TypeElement cls,
-            Map<TypeElement, List<TypeElement>> graph) {
-
-        return buildMRO(cls, graph, new HashSet<>());
-    }
-
-    private List<TypeElement> buildMRO(
-            TypeElement cls,
-            Map<TypeElement, List<TypeElement>> graph,
-            Set<String> visiting) {
-
-        String qname = cls.getQualifiedName().toString();
-
-        if (mroCache.containsKey(qname)) {
-            return mroCache.get(qname);
-        }
-
-        if (visiting.contains(qname)) {
-            throw new IllegalStateException("Cycle detected in inheritance graph at " + qname);
-        }
-
-        visiting.add(qname);
-
-        List<TypeElement> result = new ArrayList<>();
-        result.add(cls);
-
-        List<List<TypeElement>> sequences = new ArrayList<>();
-
-        List<TypeElement> parents = graph.getOrDefault(cls, List.of());
-
-        for (TypeElement parent : parents) {
-            sequences.add(new ArrayList<>(buildMRO(parent, graph, visiting)));
-        }
-
-        sequences.add(new ArrayList<>(parents));
-
-        result.addAll(merge(sequences));
-
-        List<TypeElement> cached = new ArrayList<>(result);
-        mroCache.put(qname, cached);
-
-        visiting.remove(qname);
-
-        return result;
-    }
-
-    private List<TypeElement> merge(List<List<TypeElement>> sequences) {
-
-        List<List<TypeElement>> seqs = new ArrayList<>();
-        for (List<TypeElement> s : sequences) {
-            seqs.add(new ArrayList<>(s));
-        }
-
-        List<TypeElement> result = new ArrayList<>();
-
-        while (true) {
-
-            Iterator<List<TypeElement>> it = seqs.iterator();
-            while (it.hasNext()) {
-                if (it.next().isEmpty()) it.remove();
-            }
-
-            if (seqs.isEmpty()) {
-                return result;
-            }
-
-            TypeElement candidate = null;
-
-            for (List<TypeElement> seq : seqs) {
-                if (seq.isEmpty()) continue;
-                TypeElement head = seq.get(0);
-
-                if (isGoodCandidate(head, seqs)) {
-                    candidate = head;
-                    break;
-                }
-            }
-
-            if (candidate == null) {
-                throw new IllegalStateException("C3 linearization failed: inconsistent hierarchy");
-            }
-
-            result.add(candidate);
-
-            for (List<TypeElement> seq : seqs) {
-                Iterator<TypeElement> it2 = seq.iterator();
-                while (it2.hasNext()) {
-                    TypeElement t = it2.next();
-                    if (sameQualified(t, candidate)) {
-                        it2.remove();
-                    }
-                }
-            }
-        }
-    }
-
-    private boolean isGoodCandidate(
-            TypeElement candidate,
-            List<List<TypeElement>> sequences) {
-
-        for (List<TypeElement> seq : sequences) {
-            for (int i = 1; i < seq.size(); i++) {
-                TypeElement t = seq.get(i);
-                if (sameQualified(t, candidate)) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    private boolean sameQualified(TypeElement a, TypeElement b) {
-        if (a == null || b == null) return false;
-        return a.getQualifiedName().toString().equals(b.getQualifiedName().toString());
-    }
-
-    private void addAllParents(TypeElement cls, Set<TypeElement> set) {
-        for (TypeElement parent : supersGraph.getOrDefault(cls, List.of())) {
-            if (!set.contains(parent)) {
-                set.add(parent);
-                addAllParents(parent, set);
-            }
-        }
-    }
-
-    private boolean inheritsFrom(TypeElement cls, String rootClassName) {
-        TypeMirror superClass = cls.getSuperclass();
-        if (superClass.getKind() == TypeKind.NONE) return false;
-        String superName = superClass.toString();
-        if (superName.equals(rootClassName)) return true;
-        if (superClass.getKind() == TypeKind.DECLARED) {
-            TypeElement superElement = (TypeElement) processingEnv.getTypeUtils().asElement(superClass);
-            return inheritsFrom(superElement, rootClassName);
-        }
         return false;
     }
 }

@@ -53,8 +53,8 @@ class ThirdPartyNextAnotherMethodC extends ThirdPartyNextAnotherMethodRootClass 
 
     public void action() {
         CallLog.log.add("ThirdPartyNextMethodC");
-        testAction();
 
+        testAction();
         nextAction();
         nextTestAction();
     }
