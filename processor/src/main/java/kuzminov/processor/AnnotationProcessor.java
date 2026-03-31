@@ -6,6 +6,7 @@ import com.squareup.javapoet.*;
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.tools.Diagnostic;
 import java.io.IOException;
@@ -102,12 +103,10 @@ public class AnnotationProcessor extends AbstractProcessor {
 
             try {
 
-                TypeMirror interfaceType = interfaceElement.asType();
-
                 TypeSpec.Builder classBuilder =
                         TypeSpec.classBuilder(rootName)
                                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-                                .addSuperinterface(TypeName.get(interfaceType));
+                                /*.addSuperinterface(TypeName.get(interfaceType))*/;
 
                 /*
                  * next field
@@ -136,44 +135,60 @@ public class AnnotationProcessor extends AbstractProcessor {
                  * методы
                  */
                 for (Element e : interfaceElement.getEnclosedElements()) {
-
                     if (e.getKind() != ElementKind.METHOD) continue;
 
                     ExecutableElement method = (ExecutableElement) e;
-
                     String methodName = method.getSimpleName().toString();
+                    String nextMethod = "next" + Character.toUpperCase(methodName.charAt(0)) + methodName.substring(1);
 
-                    String nextMethod =
-                            "next" +
-                                    Character.toUpperCase(methodName.charAt(0)) +
-                                    methodName.substring(1);
+                    List<? extends VariableElement> params = method.getParameters();
+                    String paramsList = params.stream()
+                            .map(p -> p.getSimpleName().toString())
+                            .reduce((a, b) -> a + ", " + b)
+                            .orElse("");
 
-                    /*
-                     * override
-                     */
-                    MethodSpec overrideMethod =
-                            MethodSpec.methodBuilder(methodName)
-                                    .addAnnotation(Override.class)
-                                    .addModifiers(Modifier.PUBLIC)
-                                    .returns(TypeName.get(method.getReturnType()))
-                                    .addStatement("$L()", nextMethod)
-                                    .build();
+                    MethodSpec.Builder overrideBuilder = MethodSpec.methodBuilder(methodName)
+                            .addModifiers(Modifier.PUBLIC)
+                            .returns(TypeName.get(method.getReturnType()));
 
-                    classBuilder.addMethod(overrideMethod);
+                    MethodSpec.Builder nextBuilder = MethodSpec.methodBuilder(nextMethod)
+                            .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
+                            .returns(TypeName.get(method.getReturnType()));
 
-                    /*
-                     * nextMethod
-                     */
-                    MethodSpec next =
-                            MethodSpec.methodBuilder(nextMethod)
-                                    .addModifiers(Modifier.PROTECTED, Modifier.FINAL)
-                                    .returns(TypeName.get(method.getReturnType()))
-                                    .beginControlFlow("if (next != null)")
-                                    .addStatement("next.$L()", methodName)
-                                    .endControlFlow()
-                                    .build();
+                    for (VariableElement param : params) {
+                        TypeName typeName = TypeName.get(param.asType());
+                        String paramName = param.getSimpleName().toString();
+                        overrideBuilder.addParameter(typeName, paramName);
+                        nextBuilder.addParameter(typeName, paramName);
+                    }
 
-                    classBuilder.addMethod(next);
+                    for (TypeMirror thrown : method.getThrownTypes()) {
+                        overrideBuilder.addException(TypeName.get(thrown));
+                        nextBuilder.addException(TypeName.get(thrown));
+                    }
+
+                    if (method.getReturnType().getKind() == TypeKind.VOID) {
+                        overrideBuilder.addStatement("$L($L)", nextMethod, paramsList);
+                    } else {
+                        overrideBuilder.addStatement("return $L($L)", nextMethod, paramsList);
+                    }
+
+                    classBuilder.addMethod(overrideBuilder.build());
+
+                    nextBuilder.beginControlFlow("if (next != null)");
+                    if (method.getReturnType().getKind() == TypeKind.VOID) {
+                        nextBuilder.addStatement("next.$L($L)", methodName, paramsList);
+                    } else {
+                        nextBuilder.addStatement("return next.$L($L)", methodName, paramsList);
+                    }
+                    nextBuilder.endControlFlow();
+
+                    if (method.getReturnType().getKind() != TypeKind.VOID) {
+                        String defaultValue = getDefaultValue(method.getReturnType().getKind());
+                        nextBuilder.addStatement("return " + defaultValue);
+                    }
+
+                    classBuilder.addMethod(nextBuilder.build());
                 }
 
                 /*
@@ -353,4 +368,14 @@ public class AnnotationProcessor extends AbstractProcessor {
 
         return false;
     }
+
+        private String getDefaultValue(TypeKind kind) {
+                return switch (kind) {
+                        case BOOLEAN -> "false";
+                        case BYTE, SHORT, INT, LONG, CHAR -> "0";
+                        case FLOAT -> "0.0f";
+                        case DOUBLE -> "0.0d";
+                        default -> "null";
+                };
+        }
 }

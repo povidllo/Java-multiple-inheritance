@@ -65,7 +65,7 @@ public class ThirdPartyMethodCallAnotherNextMethod {
     public void testThirdPartyNextMethod() {
         CallLog.clear();
 
-        ThirdPartyNextAnotherMethod test = new ThirdPartyNextAnotherMethodC();
+        ThirdPartyNextAnotherMethodC test = new ThirdPartyNextAnotherMethodC();
         test.action();
 
         assertEquals(

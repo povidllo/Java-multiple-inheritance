@@ -72,7 +72,7 @@ public class DiamondTest {
 
     @Test
     public void testDiamondInheritance() {
-        DiamondInterface upper = new Upper();
+        Upper upper = new Upper();
         upper.doSomething();
         var mro = DiamondInterfaceHierarchy.getMRO(Upper.class);
         assertEquals(List.of(

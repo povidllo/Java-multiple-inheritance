@@ -51,7 +51,7 @@ public class CancelNextMethodTest {
     public void testCancelOverrideMethod() {
         CallLog.clear();
 
-        TestCancel test = new TestCancelD();
+        TestCancelD test = new TestCancelD();
         test.action();
 
         assertEquals(

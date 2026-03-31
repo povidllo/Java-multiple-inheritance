@@ -56,7 +56,7 @@ public class ThirdPartyMethodTest {
     public void testThirdPartyMethod() {
         CallLog.clear();
 
-        ThirdPartyMethod test = new ThirdPartyMethodC();
+        ThirdPartyMethodC test = new ThirdPartyMethodC();
         test.action();
 
         assertEquals(

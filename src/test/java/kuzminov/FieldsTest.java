@@ -15,26 +15,27 @@ interface FieldsInterface {
 
 @Supers({})
 class FieldsA extends FieldsInterfaceRootClass {
-    int x = 1;
+    String x = "1";
 
     public FieldsA() {
     }
 
     public void action() {
-        CallLog.log.add("A:1");
+        CallLog.log.add(x);
         nextAction();
     }
 }
 
 @Supers({FieldsA.class})
 class FieldsB extends FieldsInterfaceRootClass {
-    int x = 2;
+
+    String x = "2";
 
     public FieldsB() {
     }
 
     public void action() {
-        CallLog.log.add("B:2");
+        CallLog.log.add(x);
         nextAction();
     }
 }
@@ -50,7 +51,7 @@ public class FieldsTest {
 
         assertEquals(
                 List.of(
-                        "B:2", "A:1"
+                        "2", "1"
                 ),
                 CallLog.log
         );

@@ -46,7 +46,7 @@ public class SkipOverrideMethodTest {
     public void testSkipOverrideMethod() {
         CallLog.clear();
 
-        TestSkip test = new TestSkipD();
+        TestSkipD test = new TestSkipD();
         test.action();
 
         assertEquals(

@@ -61,7 +61,7 @@ public class CreateTwoClassesInChainTests {
     public void testTwoClassesInChainTests() {
         CallLog.clear();
 
-        TwoInt test = new TwoD();
+        TwoD test = new TwoD();
         test.doSomething();
 
         assertEquals(
@@ -72,7 +72,7 @@ public class CreateTwoClassesInChainTests {
         );
 
         CallLog.clear();
-        TwoInt nextTest = new TwoC();
+        TwoC nextTest = new TwoC();
         nextTest.doSomething();
         assertEquals(
                 List.of(
@@ -81,11 +81,11 @@ public class CreateTwoClassesInChainTests {
                 CallLog.log
         );
     }
-    
+
     @Test
     public void testTwoClassesInChainReversedTests() {
         CallLog.clear();
-        TwoInt nextTest = new TwoC();
+        TwoC nextTest = new TwoC();
         nextTest.doSomething();
         assertEquals(
                 List.of(
@@ -96,7 +96,7 @@ public class CreateTwoClassesInChainTests {
 
         CallLog.clear();
 
-        TwoInt test = new TwoD();
+        TwoD test = new TwoD();
         test.doSomething();
 
         assertEquals(
