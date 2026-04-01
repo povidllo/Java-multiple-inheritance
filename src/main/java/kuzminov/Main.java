@@ -4,38 +4,72 @@ import kuzminov.annotations.RootInterface;
 import kuzminov.annotations.Supers;
 
 @RootInterface
-interface Payment {
-    double process(double amount);
+interface IWidget {
+    void render();
+
+    void click();
 }
 
 @Supers({})
-class BasePayment extends PaymentRootClass {
-    public double process(double amount) {
-        return amount;
+class Clickable extends IWidgetRootClass {
+
+    public void click() {
+        System.out.println("Clickable: обработка клика");
+        nextClick();
+    }
+
+    public void render() {
+        System.out.println("Clickable: добавляю эффект кнопки");
+        nextRender();
     }
 }
 
-@Supers({BasePayment.class})
-class Fee extends PaymentRootClass {
-    public double process(double amount) {
-        return nextProcess(amount) - 1.0;
+@Supers({})
+class Bordered extends IWidgetRootClass {
+
+    public void render() {
+        System.out.println("Bordered: рисую рамку");
+        nextRender();
+    }
+
+    public void click() {
+        System.out.println("Bordered: обработка клика по рамке");
+        nextClick();
     }
 }
 
-@Supers({BasePayment.class})
-class Tax extends PaymentRootClass {
-    public double process(double amount) {
-        return nextProcess(amount) * 1.2;
+@Supers({})
+class Logging extends IWidgetRootClass {
+
+    public void render() {
+        System.out.println("Logging: начало отрисовки");
+        nextRender();
+        System.out.println("Logging: окончание отрисовки");
     }
 }
 
-@Supers({Fee.class, Tax.class})
-class PaymentImpl extends PaymentRootClass {
+@Supers({Logging.class, Clickable.class, Bordered.class})
+class MyButton extends IWidgetRootClass {
+
+    public void render() {
+        System.out.println("MyButton: базовая отрисовка");
+        nextRender();
+    }
+
+    public void click() {
+        System.out.println("MyButton: своя логика перед кликом");
+        nextClick();
+    }
 }
 
 public class Main {
     public static void main(String[] args) {
-        PaymentImpl payment = new PaymentImpl();
-        System.out.println(payment.process(32));
+        IWidgetRootClass button = new MyButton();
+
+        System.out.println("=== render() ===");
+        button.render();
+
+        System.out.println("\n=== click() ===");
+        button.click();
     }
 }
